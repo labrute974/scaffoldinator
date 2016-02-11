@@ -6,6 +6,7 @@ class Scaffoldinator < Thor
   desc "planner", "Build the script that runs on the local/remote server"
   option :taskfile, :aliases => "-t", :desc => "specify a tasks file"
   option :"dry-run", :aliases => "-d", :type => :boolean, :desc => "See what the tasks is going to do"
+  option :verbose, :aliases => "-v", :type => :boolean, :desc => "Verbose mode."
   def planner
     puts options.inspect
   end
