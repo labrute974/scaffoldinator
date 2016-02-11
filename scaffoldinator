@@ -42,7 +42,7 @@ class Scaffoldinator < Thor
         port ||= 22
 
         puts "* Copy public key on host #{host}, port #{port}"
-        run_cmd "cat #{SSHKEY}.pub | ssh -p #{port} #{host} \"cat >> ~/.authorized_keys\""
+        run_cmd "cat #{SSHKEY}.pub | ssh -p #{port} #{host} \"cat >> ~/authorized_keys && mkdir -p ~/.ssh && mv ~/authorized_keys ~/.ssh/\""
       end
     end
   end
