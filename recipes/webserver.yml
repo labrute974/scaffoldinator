@@ -1,0 +1,4 @@
+- desc: Configure apache with mod_php and helloworld config
+  packages:
+    - name: apache2
+    - name: libapache2-mod-php5
