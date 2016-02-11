@@ -1,7 +1,12 @@
 #! /usr/bin/env ruby
 
+# Add lib/ folder into LOAD PATH
+$:.unshift File.dirname(__FILE__) + "/lib"
+
 require "thor"
+require 'net/ssh'
 require "yaml"
+require "builders"
 
 ################
 #
@@ -9,7 +14,7 @@ require "yaml"
 # Runs shell commands
 
 def run_cmd(cmd)
-  output = `#{cmd}`
+  output = `#{cmd} 2>&1`
   err("#{cmd} failed to run -- #{output}") unless $?.exitstatus == 0
 
   output.strip
@@ -42,23 +47,63 @@ class Scaffoldinator < Thor
         port ||= 22
 
         puts "* Copy public key on host #{host}, port #{port}"
-        run_cmd "cat #{SSHKEY}.pub | ssh -p #{port} #{host} \"cat >> ~/authorized_keys && mkdir -p ~/.ssh && mv ~/authorized_keys ~/.ssh/\""
+        run_cmd "cat #{SSHKEY}.pub | ssh -p #{port} #{host} \"cat >> ~/authorized_keys && mkdir -p ~/.ssh /tmp/scaffoldinator && mv ~/authorized_keys ~/.ssh/\""
       end
     end
   end
 
 
   desc "planner", "Build the script that runs on the local/remote server"
+  option :hosts, :aliases => "-H", :type => :string,  :desc => "comma-delimited list of hosts"
   option :taskfile, :aliases => "-t", :type => :string, :desc => "specify a tasks file"
   option :"dry-run", :aliases => "-d", :type => :boolean, :desc => "See what the tasks is going to do"
-  option :verbose, :aliases => "-v", :type => :boolean, :desc => "Verbose mode."
   def planner
     # Test if task file passed exists
     err("File #{options[:taskfile]} does not exist.") unless File.exists? options[:taskfile]
 
-    yaml = YAML.load_file options[:taskfile]
+    tasks = YAML.load_file options[:taskfile]
 
-    puts yaml.inspect
+    puts tasks.inspect
+
+    # Create tmp directory where scripts will be created
+    Dir.mkdir "tmp" unless Dir.exists? "tmp"
+
+    # Create tmp file for the script
+    mktemp  = run_cmd "type -p mktemp"
+    tmpfile = run_cmd "#{mktemp} tmp/build.XXXX"
+
+    tasks.each do |task|
+      puts "* #{task['desc']}"
+
+      task.each do |k,v|
+        case k
+        when "packages"
+          v.each do |pkg|
+            open(tmpfile, 'a') { |f| f.puts Builders::Package.build(pkg) }
+          end
+        when "desc"
+          next
+        else
+          err "#{k} is not supported."
+        end
+      end
+    end
+
+    if options[:hosts]
+      options[:hosts].split(',').each do |h|
+        host, port = h.split(':')
+        port ||= 22
+
+        puts "* Copy build script over to #{host}"
+        run_cmd "scp -i #{SSHKEY} -P #{port} #{tmpfile} #{host}:/tmp/scaffoldinator"
+
+        puts "* Run script on server"
+        run_cmd "ssh -i #{SSHKEY} -p #{port} #{host} bash /tmp/scaffoldinator/#{tmpfile.split('/').last}"
+      end
+    end
+
+    # Delete tmp file
+    File.delete tmpfile if File.exists? tmpfile
   end
 end
 
