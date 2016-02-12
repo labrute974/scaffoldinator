@@ -66,6 +66,9 @@ class Scaffoldinator < Thor
     # Files to copy over
     copy_files = []
 
+    # Service to restart
+    manage_services = []
+
     # Create tmp directory where scripts will be created
     Dir.mkdir "tmp" unless Dir.exists? "tmp"
 
@@ -81,11 +84,28 @@ class Scaffoldinator < Thor
         when "packages"
           v.each do |pkg|
             open(tmpfile, 'a') { |f| f.puts Builders::Package.build(pkg) }
+
+            ## check if dependent service needs restart or not
+            ## if yes, then add to list of services to get restarted
+            manage_services << pkg["service"] if pkg["service"] && !(manage_services.include? pkg["service"])
           end
+
         when "files"
           v.each do |file|
             copy_files << Builders::File.build(file)
+
+            ## check if dependent service needs restart or not
+            ## if yes, then add to list of services to get restarted
+            manage_services << file["service"] if file["service"] && !(manage_services.include? file["service"])
           end
+
+        when "service"
+          v.each do |service|
+            open(tmpfile, 'a') do |f|
+              f.puts Builders::Service.build(service, (manage_services.include? service["name"]))
+            end
+          end
+
         when "desc"
           next
         else
