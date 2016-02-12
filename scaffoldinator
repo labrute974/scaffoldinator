@@ -124,6 +124,13 @@ class Scaffoldinator < Thor
             end
           end
 
+        when "commands"
+          v.each do |command|
+            open(tmpfile, 'a') do |f|
+              f.puts Builders::Command.build(command)
+            end
+          end
+
         when "desc"
           next
         else
