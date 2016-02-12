@@ -29,7 +29,7 @@ SSHKEY = "keys/setup.pem"
 
 class Scaffoldinator < Thor
   desc "setup", "Setup the remote host with ssh keys"
-  option :hosts, :aliases => "-H", :type => :string,  :desc => "comma-delimited list of hosts"
+  option :hosts, :required => true, :aliases => "-H", :type => :string,  :desc => "comma-delimited list of hosts"
   def setup
     # Create keys directory
     Dir.mkdir "keys" unless Dir.exists? "keys"
@@ -41,21 +41,38 @@ class Scaffoldinator < Thor
       run_cmd "#{sshkeygen} -t rsa -f #{SSHKEY} -N '' -q"
     end
 
-    if options[:hosts]
-      options[:hosts].split(',').each do |h|
-        host, port = h.split(':')
-        port ||= 22
+    options[:hosts].split(',').each do |h|
+      host, port = h.split(':')
+      port ||= 22
 
-        puts "* Copy public key on host #{host}, port #{port}"
-        run_cmd "cat #{SSHKEY}.pub | ssh -p #{port} #{host} \"cat >> ~/authorized_keys && mkdir -p ~/.ssh /tmp/scaffoldinator && mv ~/authorized_keys ~/.ssh/\""
-      end
+      puts "* Copy public key on host #{host}, port #{port}"
+      run_cmd "cat #{SSHKEY}.pub | ssh -p #{port} #{host} \"cat >> ~/authorized_keys && mkdir -p ~/.ssh /tmp/scaffoldinator && mv ~/authorized_keys ~/.ssh/\""
     end
   end
 
 
+  desc "deploy", "Deploy the code on the remote server"
+  option :hosts, :required => true, :aliases => "-H", :type => :string,  :desc => "comma-delimited list of hosts"
+  option :source, :required => true, :aliases => "-s", :type => :string, :desc => "folder that contains the app"
+  option :dest, :required => true, :aliases => "-d", :type => :string, :desc => "folder in which to install the app on the remote host"
+  def deploy
+    err("Folder #{options[:source]} does not exist or is not a directory.") unless Dir.exists? options[:source]
+
+    options[:hosts].split(',').each do |h|
+      host, port = h.split(':')
+      port ||= 22
+
+      puts "* Deploy #{options[:source]} on #{h} in #{options[:dest]}"
+      run_cmd "ssh -i #{SSHKEY} -p #{port} #{host} 'rm -rf #{options[:dest]} && mkdir -p #{options[:dest]}'"
+      run_cmd "scp -r -i #{SSHKEY} -P #{port} #{options[:source]}/* #{host}:#{options[:dest]}/"
+    end
+
+  end
+
+
   desc "planner", "Build the script that runs on the local/remote server"
-  option :hosts, :aliases => "-H", :type => :string,  :desc => "comma-delimited list of hosts"
-  option :taskfile, :aliases => "-t", :type => :string, :desc => "specify a tasks file"
+  option :hosts, :required => true, :aliases => "-H", :type => :string,  :desc => "comma-delimited list of hosts"
+  option :taskfile, :required => true, :aliases => "-t", :type => :string, :desc => "specify a tasks file"
   option :"dry-run", :aliases => "-d", :type => :boolean, :desc => "See what the tasks is going to do"
   def planner
     # Test if task file passed exists
@@ -114,22 +131,20 @@ class Scaffoldinator < Thor
       end
     end
 
-    if options[:hosts]
-      options[:hosts].split(',').each do |h|
-        host, port = h.split(':')
-        port ||= 22
+    options[:hosts].split(',').each do |h|
+      host, port = h.split(':')
+      port ||= 22
 
-        puts "* Copy all file resources"
-        copy_files.each do |f|
-          run_cmd "ssh -i #{SSHKEY} -p #{port} #{host} \"echo -e '#{f["content"]}' > #{f["dest"]}\""
-        end
-
-        puts "* Copy build script over to #{host}"
-        run_cmd "scp -i #{SSHKEY} -P #{port} #{tmpfile} #{host}:/tmp/scaffoldinator"
-
-        puts "* Run script on server"
-        run_cmd "ssh -i #{SSHKEY} -p #{port} #{host} bash /tmp/scaffoldinator/#{tmpfile.split('/').last}"
+      puts "* Copy all file resources"
+      copy_files.each do |f|
+        run_cmd "ssh -i #{SSHKEY} -p #{port} #{host} \"echo -e '#{f["content"]}' > #{f["dest"]}\""
       end
+
+      puts "* Copy build script over to #{host}"
+      run_cmd "scp -i #{SSHKEY} -P #{port} #{tmpfile} #{host}:/tmp/scaffoldinator"
+
+      puts "* Run script on server"
+      run_cmd "ssh -i #{SSHKEY} -p #{port} #{host} bash /tmp/scaffoldinator/#{tmpfile.split('/').last}"
     end
 
     # Delete tmp file
