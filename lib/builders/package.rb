@@ -18,7 +18,7 @@ module Builders
     function check {
       case $os in
         *Ubuntu*)
-          cmd="dpkg -l $pkg"
+          cmd="dpkg-query -W --showformat='${Status}' $pkg|grep -q 'install ok installed'"
           ;;
       esac
 
@@ -30,7 +30,7 @@ module Builders
     function install {
       case $os in
         *Ubuntu*)
-          cmd="apt-get --yes --force-yes install $pkg"
+          cmd="apt-get -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold --yes --force-yes install $pkg"
           ;;
       esac
 
