@@ -6,3 +6,8 @@
     - name: helloworld_app
       source: files/10-hwapp_apache.conf
       dest: /etc/apache2/sites-available/10-hwapp.conf
+      service: apache2
+- desc: Ensure apache service is up
+  service:
+    - name: apache2
+      running: true
