@@ -23,6 +23,14 @@ To know how to use the scaffoldinator command line, run:
 
     bundle exec ./scaffoldinator help
 
+All the *--hosts* options for subcommands can take username and port.
+
+Example:
+
+    bundle exec ./scaffoldinator setup -H root@127.0.0.1:2222,root@192.168.0.1
+
+By default, the port is 22.
+
 ### Configuration task file
 
 The task file is just a *yaml* file. Check [here](http://www.yaml.org/spec/1.2/spec.html) for yaml.
@@ -110,6 +118,7 @@ that's where it lives (in code/).
 
  * At this stage, **builders** only support Ubuntu.
  * Manage package version
+ * Needs to run as root on remote host at the moment
  * Manage package upgrades / downgrades
  * Add more syntax checks / tests of parameters
  * Use of net-ssh library to have remote command streaming output
