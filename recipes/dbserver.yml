@@ -1,3 +1,9 @@
+- desc: Set mysql-server default password
+  commands:
+    - exec: "export DEBIAN_FRONTEND='noninteractive'"
+    - exec: "debconf-set-selections <<< 'mysql-server mysql-server/root_password password my_password'"
+    - exec: "debconf-set-selections <<< 'mysql-server mysql-server/root_password_again password my_password'"
+
 - desc: Install mysql server
   packages:
     - name: mysql-server
