@@ -93,6 +93,7 @@ class Scaffoldinator < Thor
     mktemp  = run_cmd "type -p mktemp"
     tmpfile = run_cmd "#{mktemp} tmp/build.XXXX"
 
+    puts "-- Tasks that will be executed on server"
     tasks.each do |task|
       puts "* #{task['desc']}"
 
@@ -131,13 +132,15 @@ class Scaffoldinator < Thor
       end
     end
 
+    puts "-- Run tasks on remote hosts"
+
     options[:hosts].split(',').each do |h|
       host, port = h.split(':')
       port ||= 22
 
       puts "* Copy all file resources"
       copy_files.each do |f|
-        run_cmd "ssh -i #{SSHKEY} -p #{port} #{host} \"echo -e '#{f["content"]}' > #{f["dest"]}\""
+        run_cmd "ssh -i #{SSHKEY} -p #{port} #{host} \"mkdir -p #{f["dest"].split('/')[0..-2].join('/')}; echo -e '#{f["content"]}' > #{f["dest"]}\""
       end
 
       puts "* Copy build script over to #{host}"
@@ -149,6 +152,8 @@ class Scaffoldinator < Thor
 
     # Delete tmp file
     File.delete tmpfile if File.exists? tmpfile
+
+    puts "-- Finished successfully."
   end
 end
 
