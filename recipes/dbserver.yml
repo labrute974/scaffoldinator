@@ -1,0 +1,7 @@
+- desc: Install mysql server
+  packages:
+    - name: mysql-server
+- desc: Ensure mysql-server is running
+  services:
+    - name: mysql-server
+      running: true
