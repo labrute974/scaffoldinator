@@ -2,3 +2,7 @@
   packages:
     - name: apache2
     - name: libapache2-mod-php5
+  files:
+    - name: helloworld_app
+      source: files/10-hwapp_apache.conf
+      dest: /etc/apache2/sites-available/10-hwapp.conf

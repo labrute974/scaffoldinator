@@ -63,7 +63,8 @@ class Scaffoldinator < Thor
 
     tasks = YAML.load_file options[:taskfile]
 
-    puts tasks.inspect
+    # Files to copy over
+    copy_files = []
 
     # Create tmp directory where scripts will be created
     Dir.mkdir "tmp" unless Dir.exists? "tmp"
@@ -81,6 +82,10 @@ class Scaffoldinator < Thor
           v.each do |pkg|
             open(tmpfile, 'a') { |f| f.puts Builders::Package.build(pkg) }
           end
+        when "files"
+          v.each do |file|
+            copy_files << Builders::File.build(file)
+          end
         when "desc"
           next
         else
@@ -93,6 +98,11 @@ class Scaffoldinator < Thor
       options[:hosts].split(',').each do |h|
         host, port = h.split(':')
         port ||= 22
+
+        puts "* Copy all file resources"
+        copy_files.each do |f|
+          run_cmd "ssh -i #{SSHKEY} -p #{port} #{host} \"echo -e '#{f["content"]}' > #{f["dest"]}\""
+        end
 
         puts "* Copy build script over to #{host}"
         run_cmd "scp -i #{SSHKEY} -P #{port} #{tmpfile} #{host}:/tmp/scaffoldinator"
