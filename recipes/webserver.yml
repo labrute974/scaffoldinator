@@ -1,3 +1,13 @@
+- desc: Update package list
+  commands:
+    - exec: apt-get -y update
+
+- desc: Set host to use Google DNS
+  files:
+    - name: resolv_conf_dns
+      source: files/resolv.conf
+      dest: /etc/resolv.conf
+
 - desc: Configure apache with mod_php and helloworld config
   packages:
     - name: apache2
